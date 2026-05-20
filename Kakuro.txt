@@ -1,0 +1,13 @@
+ Kakuro (Sudoku + ô chữ)
+Tổng các số trên mỗi hàng/cột bằng số đã cho
+
+Không trùng số trên cùng 1 tổng
+
+
+Kakuro 6x6
+    \ 16\  \ 23\
+    \   +---+---+
+17\ |   |   |   |
+    +---+---+---+
+    \   |   |   |
+    +---+---+---+
