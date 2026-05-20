@@ -15,3 +15,6 @@ Công nghệ sử dụng:
 
 Mục tiêu:
 Hoàn thiện ứng dụng Android quản lý sinh viên cơ bản theo mô hình MVVM.
+
+- nếu mà vô tình quên
+- nếu k hoàn thiệt thì sẽ bị phạt
