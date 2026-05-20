@@ -29,7 +29,7 @@ b) Sơ đồ hoạt động và ảnh hưởng của các câu lệnh:
           ▲              │
           │              │ git push origin <branch>
   git     │              ▼
-  pull  / │            [ Remote Repository ] (GitHub/GitLab)
+  pull  / │            [ Remote Repository ] (GitHub/Lab)
   clone   │              │
           │              │ git fetch
           └──────────────┘
@@ -76,6 +76,66 @@ Lý do nằm ở triết lý thiết kế phân tán (Distributed) của Git:
 - Conflict (Xung đột): Xảy ra khi hai nhánh cùng sửa đổi ở một dòng/đoạn code trong cùng một file, và Git không thể tự quyết định xem nên lấy dòng nào khi merge. Lập trình viên phải tự mở file ra giải quyết bằng tay.
 - Revert (`git revert <commit_hash>`): Tạo ra một commit mới có nội dung hoàn toàn trái ngược với commit cũ được chỉ định để huỷ bỏ thay đổi của commit đó mà không làm mất lịch sử commit cũ.
 - Ignore (`.gitignore`): File cấu hình khai báo các file hoặc thư mục mà Git cần bỏ qua hoàn toàn, không theo dõi và không cho phép commit lên (ví dụ: thư mục node_modules, file cấu hình bảo mật `.env`, thư mục build).
+
+4. So sánh các khái niệm dễ nhầm lẫn trong Git
+----------------------------------------------
+
+a) Khác biệt giữa git pull và git merge:
+   * git merge: Hợp nhất lịch sử của hai nhánh khác nhau ở máy cục bộ (local). Hoàn toàn offline, không liên quan đến mạng hay Remote Repository.
+   * git pull: Tải xuống và tự động hợp nhất từ máy chủ từ xa (remote). Nó tương đương với việc chạy `git fetch` (tải code mới) sau đó chạy `git merge` (gộp code vào nhánh hiện tại).
+   * Tóm lại: git pull = git fetch + git merge.
+
+b) Khác biệt giữa git revert và git reset:
+   * git revert:
+     - Tạo ra một commit mới đảo ngược thay đổi của commit cũ.
+     - Không thay đổi hay xóa lịch sử commit cũ. An toàn khi làm việc nhóm vì không gây xung đột lịch sử trên server.
+   * git reset:
+     - Di chuyển con trỏ HEAD về lại một commit trong quá khứ, loại bỏ các commit sau đó.
+     - Thay đổi/xóa lịch sử commit cũ. Chỉ nên dùng cho những commit cục bộ chưa push lên remote.
+
+c) Chi tiết về các chế độ của git reset (--soft, --mixed, --hard):
+   Lệnh `git reset <commit_hash>` đi kèm 3 cờ (mode) ảnh hưởng trực tiếp tới các vùng hoạt động của Git:
+   1. git reset --soft <commit_hash>:
+      - Chỉ chuyển con trỏ HEAD về commit chỉ định.
+      - Giữ nguyên các thay đổi của các commit bị reset trong Staging Area (sẵn sàng để commit lại). Working Directory không thay đổi.
+      - Dùng khi muốn gộp (squash) nhiều commit nhỏ thành 1.
+   2. git reset --mixed <commit_hash> (Mặc định):
+      - Chuyển con trỏ HEAD về commit chỉ định và làm sạch Staging Area.
+      - Đưa các thay đổi của các commit bị reset trở lại Working Directory dưới dạng chưa được add (unstaged).
+      - Dùng khi muốn sửa đổi lại code rồi add và commit lại.
+   3. git reset --hard <commit_hash> (Xóa sạch/Nguy hiểm):
+      - Di chuyển con trỏ HEAD về commit chỉ định.
+      - Xóa sạch toàn bộ thay đổi ở cả Staging Area và Working Directory. Code của bạn sẽ khớp hoàn toàn với commit đó.
+      - Toàn bộ code chưa commit hoặc các commit sau mốc đó sẽ bị xóa vĩnh viễn khỏi máy của bạn.
+
+5. Hướng dẫn giải quyết xung đột (conflict) chi tiết từng bước
+--------------------------------------------------------------
+Khi thực hiện merge hoặc pull, nếu hai nhánh cùng chỉnh sửa một dòng trong cùng một file, Git sẽ báo lỗi xung đột (conflict). Dưới đây là các bước để xử lý:
+
+Bước 1: Tìm các file bị xung đột
+Chạy lệnh sau để xem danh sách file đang bị xung đột (nằm trong mục "Both modified"):
+$ git status
+
+Bước 2: Xem các ký hiệu xung đột trong file
+Mở file bị xung đột bằng trình chỉnh sửa code. Bạn sẽ thấy Git chèn các ký hiệu phân tách xung đột dạng:
+<<<<<<< HEAD
+[Code của bạn trên nhánh hiện tại (HEAD)]
+=======
+[Code của nhánh khác đang merge vào]
+>>>>>>> [tên_nhánh_được_merge]
+
+Bước 3: Giải quyết xung đột bằng tay
+- Đọc kỹ cả hai đoạn code để quyết định giữ lại code của bạn, lấy code của nhánh kia, hay kết hợp cả hai để tạo ra đoạn code mới hoàn hảo nhất.
+- Lưu ý quan trọng: Bạn BẮT BUỘC phải xóa bỏ hoàn toàn các dòng ký hiệu phân cách tự động của Git (<<<<<<< HEAD, =======, >>>>>>> [tên_nhánh]).
+
+Bước 4: Đánh dấu đã giải quyết và hoàn tất Merge
+- Lưu file sau khi đã chỉnh sửa sạch sẽ.
+- Chạy lệnh add để xác nhận file đã giải quyết xung đột:
+  $ git add <tên_file>
+- Thực hiện commit để hoàn tất quá trình merge:
+  $ git commit -m "Resolve merge conflict between <nhánh_A> and <nhánh_B>"
+- Cuối cùng, thực hiện push code sạch lên remote:
+  $ git push origin <tên_nhánh>
 
 
 ================================================================================
@@ -158,7 +218,7 @@ Câu 7: Kiểm tra trạng thái thay đổi của việc làm việc như thế
 Sử dụng các lệnh sau:
 * `git status`: Kiểm tra tổng quan thư mục làm việc (file nào đã được sửa, file nào chuẩn bị commit, file nào chưa được theo dõi).
 * `git diff`: Xem chi tiết các dòng code bị thay đổi (thêm mới, xóa đi) so với commit gần nhất (khi chưa add vào Staging Area).
-* `git diff --staged` hoặc `git diff --cached`: Xem chi tiết các thay đổi đã được đưa vào Staging Area chuẩn bị commit.
+* `git diff --staged` or `git diff --cached`: Xem chi tiết các thay đổi đã được đưa vào Staging Area chuẩn bị commit.
 
 Câu 8: Bạn B tạo nhánh mới. Làm thế nào để C, D lấy được thông tin nhánh đó?
 ---------------------------------------------------------------------------
@@ -226,7 +286,7 @@ Thao tác gắn thẻ thường dùng để đánh dấu các cột mốc phiên
   `git tag`
 - Đẩy tag lên Remote (mặc định lệnh `git push` thông thường không đẩy tag lên):
   * Đẩy 1 tag cụ thể: `git push origin v1.0.0`
-  * Đẩy tất cả tag hiện có lên remote: `git push origin --tags`
+  * Đẩy tất cả tag cục bộ lên: `git push origin --tags`
 
 Câu 14: Revert thì thực hiện như thế nào?
 -----------------------------------------

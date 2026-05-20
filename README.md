@@ -1,7 +1,5 @@
 # Tài liệu Hướng dẫn & Tìm hiểu Git chi tiết
 
-Chào mừng đến với tài liệu hướng dẫn Git. Tài liệu này cung cấp toàn bộ kiến thức từ kiến trúc, các lệnh cơ bản đến các tình huống thực hành thường gặp khi làm việc nhóm bằng Git.
-
 ---
 
 ## PHẦN 1: LÝ THUYẾT & KIẾN TRÚC GIT
@@ -82,6 +80,85 @@ Sự khác biệt này đến từ triết lý thiết kế **phân tán** và k
 * **Conflict (Xung đột):** Xảy ra khi hai nhánh cùng sửa đổi ở cùng một dòng trong một file và Git không thể tự gộp được, yêu cầu lập trình viên can thiệp thủ công.
 * **Revert (`git revert <commit_hash>`):** Tạo ra một commit mới để đảo ngược lại các thay đổi của commit cũ được chỉ định (đảm bảo an toàn lịch sử).
 * **Ignore (`.gitignore`):** File khai báo các thư mục và file không muốn Git theo dõi hoặc đẩy lên máy chủ.
+
+---
+
+### 4. So sánh các khái niệm dễ nhầm lẫn trong Git
+
+#### a) Khác biệt giữa `git pull` và `git merge`
+* **`git merge`:** Là hành động **hợp nhất** lịch sử của hai nhánh khác nhau ở máy cục bộ (local). Lệnh này không liên quan trực tiếp đến mạng internet hay remote repository. Ví dụ: merge nhánh `feature-A` vào nhánh `main`.
+* **`git pull`:** Là hành động **tải xuống và hợp nhất** từ máy chủ từ xa (remote). Nó là sự kết hợp của hai bước:
+  1. `git fetch`: Tải các thay đổi mới nhất từ remote về nhưng chưa gộp vào code hiện tại.
+  2. `git merge`: Tự động gộp các thay đổi vừa tải về vào nhánh làm việc hiện tại của bạn.
+* **Tóm lại:** `git pull` = `git fetch` + `git merge`. Bạn chỉ dùng `pull` khi cần đồng bộ code từ internet, còn `merge` có thể dùng offline giữa các nhánh cục bộ.
+
+#### b) Khác biệt giữa `git revert` và `git reset`
+Đây là hai lệnh dùng để **hoàn tác** (undo) thay đổi trong Git, nhưng chúng hoạt động theo cơ chế rất khác nhau:
+
+| Tiêu chí | `git revert` | `git reset` |
+| :--- | :--- | :--- |
+| **Cơ chế hoạt động** | Tạo ra một **commit mới** có nội dung đảo ngược (triệt tiêu) thay đổi của commit cũ. | **Di chuyển con trỏ** `HEAD` quay ngược lại commit trong quá khứ, loại bỏ các commit sau đó khỏi lịch sử của nhánh hiện tại. |
+| **Ảnh hưởng lịch sử** | Giữ nguyên lịch sử commit cũ (an toàn khi làm việc nhóm). | Thay đổi/xóa bỏ lịch sử commit cũ (có thể gây rắc rối cho người khác nếu các commit đó đã push lên remote). |
+| **Phù hợp cho** | Commit đã được push lên **Remote Repository** chung. | Commit mới làm ở **Local Repository** (chưa push lên remote). |
+
+#### c) Tìm hiểu sâu về các chế độ của `git reset` (`--soft`, `--mixed`, `--hard`)
+Lệnh `git reset <commit_hash>` có 3 chế độ (mode) chính ảnh hưởng tới các vùng hoạt động của Git:
+
+1. **`git reset --soft <commit_hash>` (Chế độ nhẹ):**
+   * **Cách hoạt động:** Di chuyển con trỏ `HEAD` về commit chỉ định. 
+   * **Vùng bị ảnh hưởng:** Giữ nguyên tất cả thay đổi của các commit bị reset trong **Staging Area** (sẵn sàng để commit lại). **Working Directory** không bị thay đổi.
+   * **Ứng dụng:** Khi bạn muốn gộp nhiều commit nhỏ vừa tạo thành một commit lớn duy nhất trước khi push (Squash commit).
+
+2. **`git reset --mixed <commit_hash>` (Chế độ mặc định):**
+   * **Cách hoạt động:** Nếu bạn không truyền tham số, Git mặc định sử dụng `--mixed`.
+   * **Vùng bị ảnh hưởng:** Đưa các thay đổi của các commit bị reset trở lại **Working Directory** dưới dạng chưa được add (`unstaged/modified`). **Staging Area** bị làm sạch.
+   * **Ứng dụng:** Khi bạn muốn viết lại nội dung commit hoặc chỉnh sửa thêm một số file trước khi add và commit lại.
+
+3. **`git reset --hard <commit_hash>` (Chế độ xóa sạch):**
+   * **Cách hoạt động:** Đây là chế độ **nguy hiểm nhất**.
+   * **Vùng bị ảnh hưởng:** Xóa sạch toàn bộ thay đổi ở cả **Staging Area** and **Working Directory**. Mọi file sẽ quay trở về trạng thái chính xác của commit được chỉ định. Toàn bộ code chưa commit hoặc các commit sau đó sẽ **bị xóa vĩnh viễn**.
+   * **Ứng dụng:** Khi bạn thực sự muốn hủy bỏ hoàn toàn những gì đã làm và bắt đầu lại từ một mốc commit cũ trong quá khứ.
+
+---
+
+### 5. Hướng dẫn giải quyết xung đột (conflict) chi tiết từng bước
+
+Khi thực hiện merge hoặc pull, nếu hai nhánh cùng chỉnh sửa một dòng trong cùng một file, Git sẽ báo lỗi xung đột (conflict). Dưới đây là các bước để xử lý:
+
+#### Bước 1: Tìm các file bị xung đột
+Chạy lệnh sau để xem danh sách file đang bị xung đột (nằm trong mục **Both modified**):
+```bash
+git status
+```
+
+#### Bước 2: Xem các ký hiệu xung đột trong file
+Mở file bị xung đột bằng trình chỉnh sửa code. Bạn sẽ thấy Git chèn các ký hiệu phân tách xung đột dạng:
+```text
+<<<<<<< HEAD
+[Code của bạn trên nhánh hiện tại (HEAD)]
+=======
+[Code của nhánh khác đang merge vào]
+>>>>>>> [tên_nhánh_được_merge]
+```
+
+#### Bước 3: Giải quyết xung đột bằng tay
+* Đọc kỹ cả hai đoạn code để quyết định giữ lại code của bạn, lấy code của nhánh kia, hay kết hợp cả hai để tạo ra đoạn code mới hoàn hảo nhất.
+* **Lưu ý quan trọng:** Bạn **bắt buộc** phải xóa bỏ hoàn toàn các dòng ký hiệu phân cách tự động của Git (`<<<<<<< HEAD`, `=======`, `>>>>>>> [tên_nhánh]`).
+
+#### Bước 4: Đánh dấu đã giải quyết và hoàn tất Merge
+* Lưu file sau khi đã chỉnh sửa sạch sẽ.
+* Chạy lệnh add để xác nhận file đã giải quyết xung đột:
+  ```bash
+  git add <tên_file>
+  ```
+* Thực hiện commit để hoàn tất quá trình merge:
+  ```bash
+  git commit -m "Resolve merge conflict between <nhánh_A> and <nhánh_B>"
+  ```
+* Cuối cùng, thực hiện push code sạch lên remote:
+  ```bash
+  git push origin <tên_nhánh>
+  ```
 
 ---
 
