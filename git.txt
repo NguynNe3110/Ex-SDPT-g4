@@ -1,0 +1,287 @@
+================================================================================
+TÀI LIỆU HƯỚNG DẪN & GIẢI THÍCH KIẾN THỨC GIT CHI TIẾT
+================================================================================
+
+PHẦN 1: LÝ THUYẾT & KIẾN TRÚC GIT
+--------------------------------------------------------------------------------
+
+1. Kiến trúc về Git và các thành phần hoạt động
+------------------------------------------------
+Git hoạt động dựa trên cơ chế phân tán (Distributed Version Control System). Cấu trúc của Git gồm 4 vùng làm việc chính:
+
+a) Các vùng làm việc (Areas/States):
+   - Working Directory (Thư mục làm việc): Là thư mục chứa các file vật lý trên máy tính của bạn, nơi bạn trực tiếp chỉnh sửa code. Các file ở đây ở trạng thái chưa được Git theo dõi (untracked) hoặc đã được chỉnh sửa (modified).
+   - Staging Area / Index (Vùng đệm): Là một file/vùng chuẩn bị. Nơi chứa danh sách các file và thay đổi mà bạn đã chọn lọc để chuẩn bị ghi nhận (commit) vào lịch sử. Trạng thái của file ở đây là "staged".
+   - Local Repository (Kho lưu trữ cục bộ): Nằm trong thư mục ẩn `.git` trên máy tính của bạn. Lưu trữ toàn bộ lịch sử các commit, các nhánh (branches), và metadata của dự án dưới dạng cơ sở dữ liệu đồ thị có hướng không chu trình (DAG). Trạng thái file ở đây là "committed".
+   - Remote Repository (Kho lưu trữ từ xa): Nằm trên các máy chủ đám mây như GitHub, GitLab, Bitbucket. Dùng để chia sẻ lịch sử code và cộng tác với những người khác.
+
+b) Sơ đồ hoạt động và ảnh hưởng của các câu lệnh:
+
+         [ Working Directory ]
+                   │
+                   │ git add <file>
+                   ▼
+          [ Staging Area ] (Index)
+                   │
+                   │ git commit -m "message"
+                   ▼
+        [ Local Repository ] (.git)
+          ▲              │
+          │              │ git push origin <branch>
+  git     │              ▼
+  pull  / │            [ Remote Repository ] (GitHub/GitLab)
+  clone   │              │
+          │              │ git fetch
+          └──────────────┘
+
+c) Tác động của các câu lệnh chính:
+   - git init: Khởi tạo Local Repository (tạo thư mục `.git`) từ thư mục hiện tại.
+   - git status: Kiểm tra trạng thái các file xem đang ở vùng nào (Working Directory hay Staging Area).
+   - git add: Di chuyển các thay đổi từ Working Directory vào Staging Area.
+   - git commit: Đóng gói toàn bộ thay đổi ở Staging Area và lưu chính thức vào lịch sử của Local Repository.
+   - git push: Đẩy các commit từ Local Repository lên Remote Repository.
+   - git fetch: Tải các thay đổi mới nhất từ Remote Repository về Local Repository nhưng chưa gộp vào code đang làm việc của bạn.
+   - git merge: Gộp các thay đổi từ một nhánh khác (hoặc từ Remote) vào nhánh hiện tại trong Local Repository và Working Directory.
+   - git pull: Kết hợp của `git fetch` và `git merge`, tải code mới từ Remote về và gộp ngay vào Working Directory hiện tại.
+   - git checkout / git switch: Chuyển đổi giữa các nhánh hoặc khôi phục các file từ Local Repository về Working Directory.
+
+2. Tại sao đẩy lên server cần 3 câu lệnh (add, commit, push) mà lấy về chỉ cần 1 (pull)?
+-----------------------------------------------------------------------------------------
+Lý do nằm ở triết lý thiết kế phân tán (Distributed) của Git:
+- Khi đẩy code lên (Push):
+  1. `git add`: Cho phép bạn tự do chọn lọc những file nào hoặc thậm chí là những dòng code nào được phép đưa vào commit tiếp theo. Bạn có thể sửa 10 file nhưng chỉ muốn commit 5 file trước.
+  2. `git commit`: Lưu trữ phiên bản đó vào lịch sử máy cục bộ của bạn. Quá trình này hoàn toàn offline, giúp bạn tạo ra các commit nhỏ, rõ ràng mà không cần internet.
+  3. `git push`: Đưa tất cả các commit cục bộ đó lên máy chủ để chia sẻ với người khác.
+  => Tách biệt 3 bước giúp bạn kiểm soát hoàn toàn chất lượng code và lịch sử commit trước khi công khai lên server.
+
+- Khi lấy code về (Pull):
+  * `git pull` thực chất là một lệnh gộp (shortcut) của hai lệnh: `git fetch` và `git merge`.
+  * Vì thông thường, mục tiêu khi lấy code về từ server là muốn đồng bộ ngay lập tức những gì mới nhất vào thư mục làm việc hiện tại của bạn để tiếp tục code. Do đó Git gộp chúng thành 1 lệnh tiện lợi là `git pull`.
+
+3. Ý nghĩa của các khái niệm và câu lệnh chính
+----------------------------------------------
+- Config: Cấu hình thông tin người dùng và môi trường Git.
+  * `--global`: Áp dụng cấu hình cho tất cả các repository của người dùng đó trên máy tính.
+  * `--list`: Xem danh sách tất cả các cấu hình hiện tại của Git.
+- Khởi tạo repo (`git init`): Tạo một kho lưu trữ Git cục bộ mới tại thư mục hiện tại.
+- Clone (`git clone <url>`): Sao chép một repository từ Remote về máy tính cá nhân (tự động thiết lập kết nối remote và tải toàn bộ lịch sử).
+- Pull/Push:
+  * `git pull`: Lấy code mới nhất từ remote về và gộp vào nhánh hiện tại.
+  * `git push`: Đẩy các commit mới từ máy cục bộ lên remote.
+- Tạo và sử dụng nhánh (Branching): Nhánh giúp phát triển các tính năng độc lập mà không ảnh hưởng tới luồng code chính (`main`).
+  * `git branch <tên_nhánh>`: Tạo nhánh mới.
+  * `git checkout <tên_nhánh>` hoặc `git switch <tên_nhánh>`: Chuyển sang làm việc trên nhánh đó.
+- Merge (`git merge <tên_nhánh>`): Hợp nhất lịch sử và code từ nhánh được chỉ định vào nhánh hiện tại.
+- Log (`git log`): Xem lại lịch sử các commit (mã hash, người commit, ngày giờ, thông điệp commit).
+- Conflict (Xung đột): Xảy ra khi hai nhánh cùng sửa đổi ở một dòng/đoạn code trong cùng một file, và Git không thể tự quyết định xem nên lấy dòng nào khi merge. Lập trình viên phải tự mở file ra giải quyết bằng tay.
+- Revert (`git revert <commit_hash>`): Tạo ra một commit mới có nội dung hoàn toàn trái ngược với commit cũ được chỉ định để huỷ bỏ thay đổi của commit đó mà không làm mất lịch sử commit cũ.
+- Ignore (`.gitignore`): File cấu hình khai báo các file hoặc thư mục mà Git cần bỏ qua hoàn toàn, không theo dõi và không cho phép commit lên (ví dụ: thư mục node_modules, file cấu hình bảo mật `.env`, thư mục build).
+
+
+================================================================================
+PHẦN 2: THỰC HÀNH CÁC TÌNH HUỐNG GIT
+--------------------------------------------------------------------------------
+
+Câu 1: Tạo repo như thế nào? Public và private khác nhau ra sao? Mời bạn bè ra sao?
+----------------------------------------------------------------------------------
+- Cách tạo repo:
+  * Cục bộ: Vào thư mục dự án trên máy tính, chạy lệnh `git init`.
+  * Trên Remote (ví dụ GitHub): Đăng nhập GitHub -> click nút "New" hoặc dấu "+" ở góc phải -> Điền tên Repo -> Chọn Public/Private -> Click "Create repository".
+- Khác biệt giữa Public và Private:
+  * Public: Ai trên Internet cũng có thể xem mã nguồn của repo, clone về máy. Tuy nhiên, chỉ những người được chủ repo cấp quyền (Collaborators) mới có thể push thay đổi lên trực tiếp.
+  * Private: Chỉ có chủ repo và những người được mời đích danh mới có quyền xem mã nguồn, clone và push code lên. Người ngoài không thể tìm thấy hoặc truy cập repo này.
+- Cách mời bạn bè tham gia (GitHub):
+  * Vào trang Repo của bạn trên GitHub -> Chọn tab **Settings** -> Chọn mục **Collaborators** ở thanh menu bên trái -> Click nút **Add people** -> Nhập email hoặc username GitHub của bạn bè để gửi lời mời. Bạn bè cần chấp nhận lời mời để bắt đầu làm việc chung.
+
+Câu 2: Gitconfig có tác dụng gì? Sử dụng khi nào? Có thể thay đổi thông tin không?
+---------------------------------------------------------------------------------
+- Tác dụng: Lưu trữ các cấu hình hoạt động của Git như tên người dùng (`user.name`), email (`user.email`), công cụ so sánh code (diff tool), các phím tắt lệnh (aliases), định dạng kết thúc dòng (autocrlf), v.v.
+- Sử dụng khi nào: Sử dụng khi bắt đầu thiết lập Git trên máy tính mới, khi muốn thay đổi thông tin người commit cho phù hợp với từng dự án (dự án cá nhân dùng email cá nhân, dự án công ty dùng email công ty), hoặc khi muốn cấu hình các phím tắt lệnh.
+- Có thể thay đổi thông tin trong gitconfig không?
+  * Hoàn toàn CÓ THỂ thay đổi bất cứ lúc nào.
+  * Cách thay đổi:
+    + Qua lệnh: `git config --global user.name "Tên của bạn"` và `git config --global user.email "email@example.com"`.
+    + Qua file: Chỉnh sửa trực tiếp file cấu hình cục bộ tại `.git/config` hoặc file cấu hình toàn cục tại `C:\Users\<Tên_User>\.gitconfig`.
+
+Câu 3: Bạn A tạo 01 repo, đẩy 1 source nhỏ lên git và tạo nhánh main
+--------------------------------------------------------------------
+Quy trình thực hiện của bạn A:
+1. Mở terminal tại thư mục chứa source code cục bộ.
+2. Chạy lệnh khởi tạo:
+   `git init`
+3. Thêm tất cả file vào staging:
+   `git add .`
+4. Tạo commit đầu tiên:
+   `git commit -m "Initial commit"`
+5. Đổi tên nhánh mặc định thành `main` (nếu Git đang để mặc định là `master`):
+   `git branch -M main`
+6. Liên kết với kho chứa từ xa (GitHub):
+   `git remote add origin <URL_của_Repo>`
+7. Đẩy code lên nhánh main của remote:
+   `git push -u origin main`
+
+Câu 4: Bạn B, C, D tạo các nhánh riêng biệt, lấy code nhánh main về và chỉnh sửa
+--------------------------------------------------------------------------------
+Quy trình thực hiện của các bạn B, C, D:
+1. Lấy code từ repo của bạn A về máy:
+   `git clone <URL_của_Repo>`
+2. Di chuyển vào thư mục dự án vừa clone:
+   `cd <tên_thư_mục_dự_án>`
+3. Tạo và chuyển sang nhánh riêng của mình để làm việc (ví dụ bạn B tạo nhánh `feature-B`):
+   * Bạn B: `git checkout -b feature-B` (hoặc `git switch -c feature-B`)
+   * Bạn C: `git checkout -b feature-C`
+   * Bạn D: `git checkout -b feature-D`
+4. Tiến hành sửa đổi code trên nhánh vừa tạo.
+
+Câu 5: Thực hiện đẩy code chỉnh sửa lên nhánh của mình như thế nào?
+-------------------------------------------------------------------
+Sau khi chỉnh sửa code xong, các bạn thực hiện đẩy code lên nhánh của mình bằng các lệnh:
+1. Đưa các thay đổi vào Staging Area:
+   `git add <tên_file>` (hoặc `git add .` để thêm toàn bộ thay đổi)
+2. Ghi nhận thay đổi cục bộ:
+   `git commit -m "Mô tả nội dung chỉnh sửa"`
+3. Đẩy lên nhánh tương ứng trên Remote (ví dụ bạn B đẩy lên nhánh `feature-B`):
+   `git push origin feature-B`
+   *(Nếu là lần đầu push nhánh này, có thể dùng `git push -u origin feature-B` để Git ghi nhớ liên kết phục vụ cho các lần push sau chỉ cần gõ `git push`).*
+
+Câu 6: Chuyển nhánh như thế nào?
+--------------------------------
+Để chuyển đổi qua lại giữa các nhánh:
+* Cách hiện đại (từ Git 2.23+):
+  `git switch <tên_nhánh>`
+* Cách truyền thống:
+  `git checkout <tên_nhánh>`
+* Lưu ý trước khi chuyển nhánh: Bạn nên commit hoặc tạm cất các thay đổi chưa commit (sử dụng `git stash`) để tránh xung đột mã nguồn khi chuyển sang nhánh khác.
+
+Câu 7: Kiểm tra trạng thái thay đổi của việc làm việc như thế nào?
+------------------------------------------------------------------
+Sử dụng các lệnh sau:
+* `git status`: Kiểm tra tổng quan thư mục làm việc (file nào đã được sửa, file nào chuẩn bị commit, file nào chưa được theo dõi).
+* `git diff`: Xem chi tiết các dòng code bị thay đổi (thêm mới, xóa đi) so với commit gần nhất (khi chưa add vào Staging Area).
+* `git diff --staged` hoặc `git diff --cached`: Xem chi tiết các thay đổi đã được đưa vào Staging Area chuẩn bị commit.
+
+Câu 8: Bạn B tạo nhánh mới. Làm thế nào để C, D lấy được thông tin nhánh đó?
+---------------------------------------------------------------------------
+Để bạn C và D lấy được nhánh `feature-B` của bạn B:
+1. Bạn B bắt buộc phải push nhánh đó lên Remote trước:
+   `git push origin feature-B`
+2. Bạn C và D ở máy của mình chạy lệnh tải thông tin mới nhất từ Remote về:
+   `git fetch origin`
+3. Sau khi fetch, C và D đã có thông tin về nhánh của B. Để chuyển sang làm việc hoặc xem nhánh đó:
+   `git checkout feature-B` (Git sẽ tự động tạo nhánh local `feature-B` theo dõi nhánh `origin/feature-B`).
+
+Câu 9: Bạn C muốn hợp nhất (merge) với nhánh B thì làm như thế nào?
+------------------------------------------------------------------
+Để bạn C hợp nhất các thay đổi từ nhánh B (`feature-B`) vào nhánh của mình (`feature-C`):
+1. Bạn C cần đảm bảo đã cập nhật nhánh `feature-B` mới nhất từ remote (nếu bạn B đã push):
+   `git fetch origin`
+2. Bạn C chuyển sang làm việc trên nhánh của mình:
+   `git checkout feature-C`
+3. Thực hiện lệnh merge nhánh của B vào:
+   * Nếu muốn merge từ nhánh `feature-B` cục bộ trên máy của C (nếu C đã có nhánh này):
+     `git merge feature-B`
+   * Nếu muốn merge trực tiếp nhánh của B từ remote về nhánh hiện tại của mình:
+     `git merge origin/feature-B`
+4. Nếu không có xung đột (conflict), Git sẽ tự động gộp và tạo một commit merge mới. Nếu có conflict, bạn C cần giải quyết xung đột (xem Câu 15).
+
+Câu 10: Tạo thư mục config nhưng không muốn đẩy lên git (Git Ignore)
+--------------------------------------------------------------------
+Để loại bỏ thư mục `config` khỏi việc theo dõi của Git:
+1. Tại thư mục gốc của dự án, tạo một file tên là `.gitignore` (nếu chưa có).
+2. Mở file `.gitignore` bằng trình chỉnh sửa văn bản và thêm dòng sau vào:
+   ```
+   config/
+   ```
+3. Lưu file lại. Từ giờ, mọi file bên trong thư mục `config` sẽ bị Git bỏ qua.
+*Lưu ý:* Nếu thư mục hoặc file trong `config` đã từng được commit lên Git trước đó, việc thêm vào `.gitignore` sẽ không có tác dụng ngay lập tức. Bạn cần xóa chúng khỏi bộ nhớ đệm của Git trước bằng lệnh:
+`git rm -r --cached config`
+Sau đó tiến hành commit và push thay đổi này lên.
+
+Câu 11: Muốn xem lại những ai đã commit thì làm như thế nào?
+-----------------------------------------------------------
+Sử dụng các lệnh xem lịch sử commit:
+* `git log`: Hiển thị danh sách commit chi tiết (Hash, Author, Date, Message) theo thứ tự từ mới nhất đến cũ nhất.
+* `git log --oneline`: Hiển thị lịch sử ngắn gọn (chỉ gồm hash rút gọn và tiêu đề commit).
+* `git log --author="Tên Tác Giả"`: Lọc commit theo tên người viết code.
+* `git shortlog -sn`: Liệt kê danh sách tất cả những người đã commit trong repo kèm theo tổng số lượng commit của từng người.
+
+Câu 12: Muốn xem cụ thể thông tin đã chỉnh sửa trong một commit thì làm như thế nào?
+------------------------------------------------------------------------------------
+Sử dụng lệnh `git show` kết hợp mã hash của commit đó:
+* `git show <mã_hash_commit>` (ví dụ: `git show a1b2c3d`)
+Lệnh này sẽ hiển thị:
+- Thông tin tác giả, ngày giờ thực hiện commit.
+- Message mô tả commit.
+- Diff chi tiết: So sánh các dòng code được thêm vào (màu xanh lá) và các dòng bị xóa đi (màu đỏ) trong commit đó.
+
+Câu 13: Gắn thẻ (Tagging) thì thực hiện như thế nào?
+---------------------------------------------------
+Thao tác gắn thẻ thường dùng để đánh dấu các cột mốc phiên bản (ví dụ: v1.0, v2.0):
+- Tạo Tag cục bộ:
+  * Lightweight tag (Tag nhanh, chỉ lưu hash commit):
+    `git tag v1.0.0`
+  * Annotated tag (Tag có chú thích, lưu thông tin người tạo, ngày tháng và thông điệp):
+    `git tag -a v1.0.0 -m "Phiên bản Release chính thức 1.0.0"`
+- Xem các tag hiện có:
+  `git tag`
+- Đẩy tag lên Remote (mặc định lệnh `git push` thông thường không đẩy tag lên):
+  * Đẩy 1 tag cụ thể: `git push origin v1.0.0`
+  * Đẩy tất cả tag hiện có lên remote: `git push origin --tags`
+
+Câu 14: Revert thì thực hiện như thế nào?
+-----------------------------------------
+Revert dùng để hoàn tác một commit đã được đẩy lên remote một cách an toàn mà không làm mất lịch sử các commit sau đó:
+1. Tìm mã hash của commit muốn huỷ bỏ bằng lệnh `git log`.
+2. Chạy lệnh:
+   `git revert <mã_hash_commit>`
+3. Git sẽ tự động mở trình soạn thảo văn bản để bạn nhập thông điệp commit mới giải thích việc hoàn tác (hoặc nhấn lưu mặc định).
+4. Git sẽ tạo ra một commit mới có nội dung thay đổi ngược lại hoàn toàn với commit cũ.
+5. Cuối cùng, thực hiện `git push` để đẩy commit hoàn tác này lên Remote.
+
+Câu 15: Tạo trường hợp bạn B và C merge bị conflict và xử lý nó
+----------------------------------------------------------------
+Tình huống giả định:
+Nhánh chung `main` đang có một file là `document.txt` chứa nội dung ở dòng số 5 là:
+`Dòng số 5: Nội dung ban đầu`
+
+*Bước 1: Hai bạn cùng làm việc*
+- Bạn B checkout nhánh `feature-B` và sửa dòng 5 của file `document.txt` thành:
+  `Dòng số 5: Nội dung được sửa bởi Bạn B`
+  Bạn B commit và đẩy code lên, sau đó merge vào nhánh `main` thành công.
+- Bạn C checkout nhánh `feature-C` từ trước đó (chưa cập nhật code của B) và cũng sửa dòng 5 của file `document.txt` thành:
+  `Dòng số 5: Nội dung được sửa bởi Bạn C`
+  Bạn C commit thay đổi của mình cục bộ.
+
+*Bước 2: Phát sinh xung đột (Conflict)*
+- Bạn C thực hiện lấy code mới nhất về và merge nhánh `main` (hoặc nhánh `feature-B`) vào nhánh `feature-C` của mình:
+  `git merge main`
+- Màn hình terminal sẽ thông báo lỗi:
+  `CONFLICT (content): Merge conflict in document.txt`
+  `Automatic merge failed; fix conflicts and then commit the result.`
+
+*Bước 3: Xử lý conflict*
+- Bạn C mở file `document.txt` lên. Git sẽ tự động chèn các ký hiệu phân tách xung đột như sau:
+  ```
+  <<<<<<< HEAD
+  Dòng số 5: Nội dung được sửa bởi Bạn C
+  =======
+  Dòng số 5: Nội dung được sửa bởi Bạn B
+  >>>>>>> main
+  ```
+  *Giải thích:*
+  + `<<<<<<< HEAD` đến `=======`: Nội dung thay đổi đang có ở nhánh hiện tại của bạn C.
+  + `=======` đến `>>>>>>> main`: Nội dung thay đổi từ nhánh `main` (đã có code của bạn B) được merge vào.
+
+- Để xử lý xung đột, bạn C cần:
+  1. Thảo luận với bạn B (nếu cần) để quyết định giữ lại nội dung nào (của B, của C, hay kết hợp cả hai).
+  2. Xóa các ký hiệu phân tách (`<<<<<<<`, `=======`, `>>>>>>>`).
+  3. Sửa nội dung dòng đó thành nội dung mong muốn cuối cùng, ví dụ chọn giữ lại cả hai hoặc gộp lại:
+     `Dòng số 5: Nội dung được sửa kết hợp bởi B và C`
+  4. Lưu file lại.
+  5. Đưa file đã sửa xung đột vào staging:
+     `git add document.txt`
+  6. Tiến hành commit để hoàn tất quá trình merge:
+     `git commit -m "Resolve merge conflict between feature-C and main"`
+  7. Đẩy code sạch lên Remote:
+     `git push origin feature-C`
+================================================================================
