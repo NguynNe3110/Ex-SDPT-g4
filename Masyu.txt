@@ -1,0 +1,11 @@
+Masyu (Đường trắng đen)
+Ô trắng: đi thẳng qua, phải rẽ ở ô tiếp theo
+Ô đen: rẽ 90°, đi thẳng ít nhất 1 ô
+Tạo thành 1 vòng khép kín
+
+Masyu - 5x5
+○ ● ○ . .
+. . . . .
+. ● . . ○
+. . . . .
+. . ○ . ●
