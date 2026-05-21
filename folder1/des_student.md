@@ -18,3 +18,5 @@ Hoàn thiện ứng dụng Android quản lý sinh viên cơ bản theo mô hìn
 
 - nếu mà vô tình quên
 - nếu k hoàn thiệt thì sẽ bị phạt
+
+- thực hiện chức năng mới
